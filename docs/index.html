@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache">
+<title>Angler Fish Log</title>
+<link rel="icon" type="image/svg+xml" href="assets/fish.svg?v=1">
+<!-- Bump ?v= on any styles/app/data change so browsers fetch fresh copies (no hard-refresh needed) -->
+<link rel="stylesheet" href="styles.css?v=1">
+</head>
+<body>
+<div id="app">
+  <!-- Title bar -->
+  <header class="titlebar">
+    <img class="title-icon" src="assets/fish.svg?v=1" alt="">
+    <h1>Angler Fish Log <span id="dirtyDot" class="dirty-dot hidden" title="Unsaved changes">&#9679;</span></h1>
+    <button id="newLogBtn" class="btn tiny" title="Start a new, empty logbook">New</button>
+    <button id="saveBtn" class="btn tiny" title="Save the logbook to a file">Save</button>
+    <button id="openBtn" class="btn tiny" title="Open a logbook file">Open</button>
+    <button id="helpBtn" class="icon-btn" title="Help" aria-label="Help">?</button>
+    <button id="aboutBtn" class="icon-btn" title="About / Attributions" aria-label="About">&#9432;</button>
+    <button id="themeBtn" class="icon-btn" title="Theme" aria-label="Theme">&#9881;</button>
+    <input type="file" id="importFile" accept=".json" style="display:none">
+  </header>
+
+  <!-- Narrow-screen switcher between the panes -->
+  <div class="view-tabs">
+    <button id="tabSpecies" class="tab">Species</button>
+    <button id="tabEditor" class="tab sel">Entry</button>
+    <button id="tabLog" class="tab">Logbook <span class="lb-count" id="lbCountTab">0</span></button>
+  </div>
+
+  <main class="layout">
+    <!-- Species caught so far, by reserve, with personal bests. Built from the log itself. -->
+    <aside class="sidebar" id="speciesPane">
+      <input type="search" id="speciesSearch" class="search" placeholder="Search species or reserve…" autocomplete="off">
+      <div class="row gap">
+        <button id="treeExpand" class="btn tiny" style="flex:1">Expand All</button>
+        <button id="treeCollapse" class="btn tiny" style="flex:1">Collapse All</button>
+      </div>
+      <p id="searchCount" class="hint"></p>
+      <div id="speciesTree" class="qtree"></div>
+    </aside>
+
+    <!-- Entry editor -->
+    <section class="editor" id="editorPane">
+      <div class="species-head" id="speciesHead">
+        <img class="sh-icon" src="assets/fish.svg?v=1" alt="">
+        <div class="sh-text">
+          <div class="sh-name" id="sh_name">New catch</div>
+          <div class="sh-meta" id="sh_meta">Type the species, or pick one you've caught before from the Species list.</div>
+          <div class="sh-records" id="sh_records"></div>
+        </div>
+      </div>
+
+      <div class="editor-body">
+        <div class="form-grid">
+          <label class="field">Date
+            <input type="datetime-local" id="f_date">
+          </label>
+          <label class="field">Angler
+            <input type="text" id="f_angler" list="anglerNames" autocomplete="off" placeholder="Player name">
+            <datalist id="anglerNames"></datalist>
+          </label>
+          <label class="field">Reserve
+            <input type="text" id="f_reserve" list="reserveNames" autocomplete="off" placeholder="Where you were fishing">
+            <datalist id="reserveNames"></datalist>
+          </label>
+          <label class="field">Species
+            <input type="text" id="f_species" list="speciesNames" autocomplete="off" placeholder="Yellow Perch">
+            <datalist id="speciesNames"></datalist>
+          </label>
+          <label class="field">Medal
+            <input type="text" id="f_medal" list="medalNames" autocomplete="off" placeholder="Bronze">
+            <datalist id="medalNames"></datalist>
+          </label>
+          <label class="field">Score
+            <input type="number" id="f_score" min="0" step="1" inputmode="numeric" placeholder="273">
+          </label>
+          <label class="field">Weight
+            <span class="unit-row">
+              <input type="number" id="f_weight" min="0" step="any" inputmode="decimal" placeholder="15.28">
+              <select id="f_weightUnit" aria-label="Weight unit">
+                <option value="oz">oz</option><option value="lb">lb</option>
+                <option value="g">g</option><option value="kg">kg</option>
+              </select>
+            </span>
+          </label>
+          <label class="field">Length
+            <span class="unit-row">
+              <input type="number" id="f_length" min="0" step="any" inputmode="decimal" placeholder="0.59">
+              <select id="f_lengthUnit" aria-label="Length unit">
+                <option value="ft">ft</option><option value="in">in</option>
+                <option value="cm">cm</option><option value="m">m</option>
+              </select>
+            </span>
+          </label>
+
+          <!-- The three gear slots on the catch card, left to right. The percentage under each is
+               that piece's experience. -->
+          <fieldset class="field wide gear">
+            <legend>Gear <span class="legend-note">name and experience %</span></legend>
+            <div class="gear-grid">
+              <span class="gear-label">Rod</span>
+              <input type="text" id="f_rod" list="rodNames" autocomplete="off" placeholder="Rod">
+              <span class="pct-row"><input type="number" id="f_rodXp" min="0" max="100" step="any" inputmode="decimal" placeholder="1" aria-label="Rod experience %">%</span>
+              <span class="gear-label">Reel</span>
+              <input type="text" id="f_reel" list="reelNames" autocomplete="off" placeholder="Reel">
+              <span class="pct-row"><input type="number" id="f_reelXp" min="0" max="100" step="any" inputmode="decimal" placeholder="6" aria-label="Reel experience %">%</span>
+              <span class="gear-label">Bait</span>
+              <input type="text" id="f_bait" list="baitNames" autocomplete="off" placeholder="Corn">
+              <span class="pct-row"><input type="number" id="f_baitXp" min="0" max="100" step="any" inputmode="decimal" placeholder="0" aria-label="Bait experience %">%</span>
+            </div>
+            <datalist id="rodNames"></datalist>
+            <datalist id="reelNames"></datalist>
+            <datalist id="baitNames"></datalist>
+            <div class="preset-row">
+              <select id="presetPick" aria-label="Gear preset"><option value="">Gear presets…</option></select>
+              <button id="presetSave" class="btn tiny" type="button" title="Remember this rod, reel and bait as a preset">Save Preset</button>
+              <button id="presetDelete" class="btn tiny" type="button" disabled title="Forget the chosen preset">Delete</button>
+            </div>
+          </fieldset>
+
+          <label class="field">Temperature
+            <span class="unit-row">
+              <input type="number" id="f_temp" step="any" inputmode="decimal" placeholder="56.5">
+              <select id="f_tempUnit" aria-label="Temperature unit">
+                <option value="F">&deg;F</option><option value="C">&deg;C</option>
+              </select>
+            </span>
+          </label>
+          <label class="field">Time
+            <!-- The catch card's own shape, HH:MM:SS: how long the fish was on the line. -->
+            <input type="text" id="f_fightTime" inputmode="numeric" placeholder="00:00:31">
+          </label>
+          <label class="field wide">Traits
+            <input type="text" id="f_traits" list="traitNames" autocomplete="off" placeholder="Separate several with commas">
+            <datalist id="traitNames"></datalist>
+          </label>
+          <label class="field">Time of Day
+            <input type="text" id="f_timeOfDay" list="timeOfDayNames" autocomplete="off" placeholder="Morning, 06:40…">
+            <datalist id="timeOfDayNames"></datalist>
+          </label>
+          <label class="field">Weather
+            <input type="text" id="f_weather" list="weatherNames" autocomplete="off" placeholder="Clear, Rain…">
+            <datalist id="weatherNames"></datalist>
+          </label>
+          <label class="field">Kept / Released
+            <select id="f_fate">
+              <option value="">—</option>
+              <option>Kept</option>
+              <option>Released</option>
+            </select>
+          </label>
+          <label class="field wide">Notes
+            <textarea id="f_notes" rows="3" placeholder="Anything else worth remembering…"></textarea>
+          </label>
+        </div>
+
+        <div class="editor-actions">
+          <button id="deleteEntryBtn" class="btn tiny hidden">Delete</button>
+          <label class="opt-toggle" title="Keep the form filled in after saving, so catches from the same spot and setup can be logged back to back">
+            <input type="checkbox" id="streakToggle"><span class="switch"></span>Same Spot
+          </label>
+          <label class="opt-toggle" title="Stamp the date and time at the moment you save, rather than filling it in by hand">
+            <input type="checkbox" id="stampToggle"><span class="switch"></span>Timestamp
+          </label>
+          <span style="flex:1"></span>
+          <button id="newBtn" class="btn tiny outlined" title="Start a new entry">New Entry</button>
+          <button id="cancelEntryBtn" class="btn tiny outlined" disabled>Cancel</button>
+          <button id="saveAsNewBtn" class="btn tiny outlined hidden"
+                  title="Add this as another entry, leaving the original as it was">Save as New</button>
+          <button id="saveEntryBtn" class="btn accent tiny" disabled>Save Entry</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Logbook -->
+    <section class="logbook" id="logPane">
+      <header class="lb-head">
+        <h2>Logbook <span class="lb-count" id="lbCount">0</span></h2>
+        <label class="lb-groupby">Sort
+          <select id="sortBy">
+            <option value="dateDesc">Date — newest</option>
+            <option value="dateAsc">Date — oldest</option>
+            <option value="seqDesc">Entry # — highest</option>
+            <option value="seqAsc">Entry # — lowest</option>
+            <option value="weightDesc">Weight — heaviest</option>
+            <option value="lengthDesc">Length — longest</option>
+            <option value="scoreDesc">Score — highest</option>
+          </select>
+        </label>
+        <label class="lb-groupby">Group
+          <select id="groupBy">
+            <option value="none">Nothing</option>
+            <option value="date">Day</option>
+            <option value="reserve">Reserve</option>
+            <option value="species">Species</option>
+            <option value="medal">Medal</option>
+            <option value="angler">Angler</option>
+            <option value="fate">Kept / Released</option>
+          </select>
+        </label>
+      </header>
+      <div class="lb-tools">
+        <label class="lb-selectall" title="Select every entry">
+          <input type="checkbox" id="selectAll">All
+        </label>
+        <label class="lb-groupby" title="Show weights, lengths and temperatures as typed, or converted">Units
+          <select id="unitsMode">
+            <option value="asEntered">As entered</option>
+            <option value="imperial">Imperial</option>
+            <option value="metric">Metric</option>
+          </select>
+        </label>
+        <span style="flex:1"></span>
+        <button id="clearSelBtn" class="btn tiny" disabled title="Unselect every entry">Clear</button>
+        <button id="copySelBtn" class="btn tiny" disabled>Copy Selected</button>
+      </div>
+      <div id="lbList" class="lb-list"></div>
+    </section>
+  </main>
+</div>
+
+<!-- Help dialog -->
+<div id="helpModal" class="modal hidden">
+  <div class="modal-card">
+    <h2>How this works</h2>
+    <ul>
+      <li>Fill in what the catch card shows: species, medal, weight, length, score, the three pieces of gear
+          with their experience %, temperature, bait and time. Every field is free text, so anything the
+          game shows can be written down, whether or not it's in the suggestions.</li>
+      <li>The <strong>+</strong> next to weight, length and score works like the catch card's: how much this
+          catch beat that angler's previous best of the same species. The first catch of a species counts in
+          full. A catch that didn't beat the record shows no <strong>+</strong>.</li>
+      <li>The <strong>&#128339;</strong> beside a text field opens its <strong>History</strong>: everything that
+          field has held. Click a value to fill it in, add ones by hand (fish you caught before you started
+          logging), or remove any with <strong>&times;</strong>. Saving a catch adds its values to History.
+          Removing from History never touches the logbook.</li>
+      <li>The <strong>Species</strong> list is every species you've logged, by reserve, with your bests. Click one to
+          start a new catch of it on that reserve.</li>
+      <li><strong>Gear presets</strong> remember a rod, reel and bait together. The experience % is still
+          per catch, since it changes every time.</li>
+      <li><strong>Same Spot</strong> keeps the form filled after each save, for a run of catches from the same
+          place with the same setup.</li>
+      <li><strong>Timestamp</strong> is on by default, so the date is set the moment you save. Turn it off to
+          fill the date in yourself.</li>
+      <li>Already logged a catch and want another like it? Open it, change what differed, and press
+          <strong>Save as New</strong>.</li>
+      <li>Tick entries and press <strong>Copy Selected</strong> to put them on the clipboard.
+          <strong>Shift-click</strong> a second tick box to take everything in between.</li>
+      <li><strong>Units</strong> shows the log as typed, or converted to imperial or metric. What you typed is
+          what's kept.</li>
+    </ul>
+    <hr class="modal-divider">
+    <h2>Saving</h2>
+    <ul>
+      <li>The log saves itself in this browser as you type, including the entry you're part-way through.</li>
+      <li><strong>New</strong> starts an empty logbook. Save the current one first if you want to keep it.</li>
+      <li><strong>Save</strong> writes it out to a <code>.json</code> file and <strong>Open</strong> loads one back.</li>
+      <li>Clearing your browser's site data wipes the in-browser copy, so keep a file if the log matters.</li>
+    </ul>
+    <div class="row end gap"><button id="helpClose" class="btn">Close</button></div>
+  </div>
+</div>
+
+<!-- About dialog -->
+<div id="aboutModal" class="modal hidden">
+  <div class="modal-card">
+    <h2>Angler Fish Log</h2>
+    <p class="muted">An unofficial, non-commercial logbook for Call of the Wild: The Angler. Record what you caught,
+      where, with what, and how it measured up. Not affiliated with, endorsed by, or supported by Expansive Worlds
+      or THQ Nordic.</p>
+    <hr class="modal-divider">
+    <p class="muted">Nothing here is read from the game. Every field is yours to fill in from the catch card.
+      The suggestion lists for reserves, species, medals, weather, traits and baits come from community sources,
+      credited below, and only ever suggest.</p>
+    <p class="muted" id="sourcesLine"></p>
+    <p class="muted">Call of the Wild: The Angler and its names are the property of their owners. The app is
+      modelled on the same author's Monster Hunter Hunting Log apps.</p>
+    <p class="muted"><strong>AI Use:</strong> Anthropic's <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude Code</a> was used for code generation and code assistance.</p>
+    <div class="row end gap"><button id="aboutClose" class="btn">Close</button></div>
+  </div>
+</div>
+
+<!-- History for one text field: the values it has held, editable -->
+<div id="historyModal" class="modal hidden">
+  <div class="modal-card">
+    <h2 id="historyTitle">History</h2>
+    <p class="muted">Click a value to fill it in. Remove anything you don't want offered again. This list is separate
+      from the logbook, so removing a value here changes no catch.</p>
+    <div class="hist-add">
+      <input type="text" id="historyAdd" class="search" autocomplete="off" placeholder="Add a value…">
+      <button id="historyAddBtn" class="btn tiny" type="button">Add</button>
+    </div>
+    <ul id="historyList" class="hist-list"></ul>
+    <div class="row end gap">
+      <button id="historyClear" class="btn tiny" type="button">Clear All</button>
+      <span style="flex:1"></span>
+      <button id="historyClose" class="btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Theme dialog -->
+<div id="themeModal" class="modal hidden">
+  <div class="modal-card">
+    <h2>Theme</h2>
+    <div id="swatches" class="swatches"></div>
+    <div class="row end gap"><button id="themeClose" class="btn">Close</button></div>
+  </div>
+</div>
+
+<!-- Generic confirm dialog -->
+<div id="confirmModal" class="modal hidden">
+  <div class="modal-card">
+    <h2 id="confirmTitle">Are you sure?</h2>
+    <p id="confirmBody" class="muted"></p>
+    <div class="row end gap">
+      <button id="confirmCancel" class="btn">Cancel</button>
+      <button id="confirmOk" class="btn accent">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="data.js?v=1"></script>
+<script src="app.js?v=1"></script>
+</body>
+</html>
