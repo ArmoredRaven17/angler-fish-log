@@ -7,7 +7,7 @@
 <title>Angler Fish Log</title>
 <link rel="icon" type="image/svg+xml" href="assets/fish.svg?v=1">
 <!-- Bump ?v= on any styles/app/data change so browsers fetch fresh copies (no hard-refresh needed) -->
-<link rel="stylesheet" href="styles.css?v=1">
+<link rel="stylesheet" href="styles.css?v=2">
 </head>
 <body>
 <div id="app">
@@ -178,8 +178,12 @@
 
     <!-- Logbook -->
     <section class="logbook" id="logPane">
+      <!-- Three deliberate rows: the title, then Sort and Group, then selection and Units. Side by side
+           they crushed the title in a 400px column and wrapped its count onto a line of its own. -->
       <header class="lb-head">
         <h2>Logbook <span class="lb-count" id="lbCount">0</span></h2>
+      </header>
+      <div class="lb-controls">
         <label class="lb-groupby">Sort
           <select id="sortBy">
             <option value="dateDesc">Date — newest</option>
@@ -202,7 +206,7 @@
             <option value="fate">Kept / Released</option>
           </select>
         </label>
-      </header>
+      </div>
       <div class="lb-tools">
         <label class="lb-selectall" title="Select every entry">
           <input type="checkbox" id="selectAll">All
